@@ -1,0 +1,181 @@
+body {
+  background-color: #0d1117;
+  color: #c9d1d9;
+  font-family: monospace, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /*! background-color: #161b22; */
+  padding: 0.75rem 1rem;
+  /*! border-bottom: 1px solid #30363d; */
+}
+
+.logo-title {
+  font-size: 3.2rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.directory {
+  color: #8b949e;
+  font-size: 0.9rem;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  flex: 1;
+  padding: 1rem;
+}
+
+.panel {
+  background-color: #161b22;
+  padding: 1rem;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel h2 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.dropzone {
+  flex: 1;
+  margin: 0.5rem 0;
+  padding: 1.5rem;
+  text-align: center;
+  border: 2px dashed #30363d;
+  border-radius: 4px;
+  background-color: #0d1117;
+  color: #8b949e;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dropzone.dragover {
+  background-color: #23863633;
+  border-color: #238636;
+}
+
+.upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.search {
+  padding: 0.2rem 0.4rem;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+}
+
+.filetable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.filetable th, .filetable td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #30363d;
+}
+
+.filetable th {
+  text-align: left;
+  color: #c9d1d9;
+}
+
+.filetable tr:hover {
+  background-color: #21262d;
+}
+
+.filetable a {
+  color: #58a6ff;
+  margin-right: 0.5rem;
+  text-decoration: none;
+}
+
+.filetable a:hover {
+  text-decoration: underline;
+}
+
+.button {
+  background-color: #1f6feb;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.button.danger {
+  background-color: #f85149;
+}
+
+.button:hover {
+  opacity: 0.9;
+}
+
+.clipboard-input {
+  flex: 0 0 auto;
+  height: 80px;
+  resize: none;
+  margin-bottom: 0.5rem;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 0.5rem;
+}
+
+.clipboard-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.clipboard-list {
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid #30363d;
+  padding-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.bottombar {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #8b949e;
+  /*! background: #161b22; */
+  /*! border-top: 1px solid #30363d; */
+}
+/* Add this to style.css */
+
+.main-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.panel {
+  flex: 1 1 400px; /* responsive panels */
+  min-width: 300px;
+}
+
