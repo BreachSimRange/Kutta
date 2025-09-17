@@ -2,7 +2,7 @@
 ![Kutta Logo](images/kutta-logo.jpg)
 
 **Kutta** is a lightweight, responsive web-based file sharing server written in **Go**.
-It was created to use during our trainings to move, paylaods and code snippets across machines in the lab environment.
+It was created to use during our trainings to move, payloads and code snippets across machines in the lab environment.
 It is an alternative tool for python http.server, motivated from tools like `goshs` and `updog`, with extra features.
 
 ## Features
@@ -123,3 +123,4 @@ make service # setup systemd service
 ## License
 
 Released under the [GNU General Public License v3 (GPL-3.0)](./LICENSE).
+
