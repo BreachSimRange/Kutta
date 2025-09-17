@@ -15,6 +15,8 @@ It is an alternative tool for python http.server, motivated from tools like `gos
 * **Embedded UI** - Dark theme, responsive design
 * **Service Ready** - Install as a `systemd` service
 
+## Screenshots
+![Screenshot](images/web-ui.jpg)
 ---
 
 
