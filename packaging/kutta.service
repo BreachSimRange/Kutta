@@ -1,5 +1,5 @@
 [Unit]
-Description=Kuttañ payload sharing server
+Description=Kutta payload sharing server
 After=network.target
 
 [Service]

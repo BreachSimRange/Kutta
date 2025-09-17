@@ -1,6 +1,6 @@
-# Kuttañ Simple Payload Sharing Server
+# Kutta Simple Payload Sharing Server
 
-**Kuttañ** is a lightweight, responsive web-based file sharing server written in **Go**.
+**Kutta** is a lightweight, responsive web-based file sharing server written in **Go**.
 It was created to use during our trainings to move, paylaods and code snippets across amcchines in the lab environment.
 It is an alternative tool for python http.server, motivated from tools like `goshs` and `updog`, with extra features.
 
@@ -110,7 +110,7 @@ sudo kutta --user www-data
 ## Developers, come here
 
 ```bash
-make build   # build kuttañ
+make build   # build kutta
 make install # install binary to /usr/local/bin
 make service # setup systemd service
 ```

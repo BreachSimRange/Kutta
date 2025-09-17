@@ -74,7 +74,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	addr := fmt.Sprintf(":%d", *port)
-	log.Printf("Kuttañ serving payloads on http://localhost%s (dir: %s)", addr, *dir)
+	log.Printf("Kutta serving payloads on http://localhost%s (dir: %s)", addr, *dir)
 
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("Server error: %v", err)
