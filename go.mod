@@ -1,6 +1,6 @@
-module kutta
+module github.com/breachsimrange/kutta
 
-go 1.21
+go 1.23
 
 require (
 	// no external dependencies yet
