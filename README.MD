@@ -1,5 +1,5 @@
 # Kutta Simple Payload Sharing Server
-[![Kutta Logo](images/kutta-logo.jpg)]
+![Kutta Logo](images/kutta-logo.jpg)
 
 **Kutta** is a lightweight, responsive web-based file sharing server written in **Go**.
 It was created to use during our trainings to move, paylaods and code snippets across amcchines in the lab environment.
