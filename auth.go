@@ -21,7 +21,7 @@ func (h *kuttaHandler) wrapWithAuth(next http.Handler) http.Handler {
 
 		auth := r.Header.Get("Authorization")
 		if auth != expected {
-			w.Header().Set("WWW-Authenticate", `Basic realm="Kutta payload server"`)
+			w.Header().Set("WWW-Authenticate", `Basic realm="Kutta File Server"`)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			log.Printf("Unauthorized access to %s from %s", r.URL.Path, r.RemoteAddr)
 			return
