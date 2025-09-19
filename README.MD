@@ -24,17 +24,6 @@ I had a loyal indie dog named 'Kuttan' when I was a kid. Meaning in Malayalam la
 
 ## Installation
 
-### One-liner (Go Install)
-
-```bash
-go install github.com/breachsimrange/kutta@latest
-```
-
-This puts the `kutta` binary in `~/go/bin/`.
-Make sure `~/go/bin` is in your `$PATH`.
-
----
-
 ### Manual Build + Service Install
 
 ```bash
@@ -54,13 +43,14 @@ This will:
 ## Usage
 
 ### Start Globally (default port `13377`)
+* Use this only if the service is not running
 
 ```bash
 kutta
 ```
 
 * Runs on `http://localhost:13377`
-* **No files visible** initially (uploads only)
+* **No files visible** initially, only uploaded files will be visible.
 
 ---
 
@@ -76,49 +66,20 @@ kutta -p 8980
 
 ---
 
-### Read-only Mode
-
-```bash
-kutta --read-only
-```
-
-### Upload-only Mode
-
-```bash
-kutta --upload-only
-```
-
-### With Authentication (Still working on it)
-
-```bash
-kutta --auth user:password
-```
-
-### Drop Privileges
-
-```bash
-sudo kutta --user www-data
-```
-
----
-
 ## Web UI Features
 
 * **Upload files** - Drag and drop or click to browse
 * **Browse subfolders** - When using `-p` with a directory
 * **Clipboard** - Add, clear, export snippets
-* **Bulk delete** - Uploaded files only
+* **Download and Execute Cradle** - Generate download and execute commands by selecting files
+* **Bulk delete** - Delete uploaded files only
 * **Responsive design** - Works on desktop and mobile
 
 ---
 
-## Developers, come here
+## Developers, come here, thsi is crappy, we need help!
 
-```bash
-make build   # build kutta
-make install # install binary to /usr/local/bin
-make service # setup systemd service
-```
+* We know this is a crappy program, we need your contributions to make it better.
 
 ---
 

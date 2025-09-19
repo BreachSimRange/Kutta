@@ -3,7 +3,7 @@ Description=Kutta payload sharing server
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/kutta -dir /var/kutta -p 13377
+ExecStart=/usr/local/bin/kutta
 WorkingDirectory=/var/kutta
 Restart=always
 User=www-data
