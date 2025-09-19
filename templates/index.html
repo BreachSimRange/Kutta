@@ -246,7 +246,7 @@ function generateCradles(filename) {
   const list = document.getElementById('cradleList');
   list.innerHTML = '';
   cradles.forEach(c => {
-    const updated = c.command.replace(/http:\/\/IP\/?/g, `http://${ip}/files`).replace(/FILENAME/g, filename);
+    const updated = c.command.replace(/http:\/\/IP\/?/g, `http://${ip}/files/`).replace(/FILENAME/g, filename);
     const box = document.createElement('div');
     box.className = 'cradle-box';
     box.innerHTML = `
