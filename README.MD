@@ -13,6 +13,7 @@ I had a loyal indie dog named 'Kuttan' when I was a kid. Meaning in Malayalam la
 * **Deletion** - Delete uploaded files (never touches existing system files)
 * **Clipboard** - Add, clear, and export snippets as JSON
 * **Security** - Read-only / Upload-only / Auth modes
+* **Download and Execute Cradles** - Predefined list of cradles to make life easier
 * **Embedded UI** - Dark theme, responsive design
 * **Service Ready** - Install as a `systemd` service
 
