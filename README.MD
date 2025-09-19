@@ -22,10 +22,21 @@ I had a loyal indie dog named 'Kuttan' when I was a kid. Meaning in Malayalam la
 ---
 
 
-## Installation
+## Installation - Linux Systems
+
+### One-liner (Go Install)
+
+```bash
+go install github.com/breachsimrange/kutta@latest
+```
+
+This will put the `kutta` binary in `~/go/bin/`. You will be able to use `kutta` command from anythere.
+Make sure `~/go/bin` is in your `$PATH`. Note, this will not start a service.
+
+---
 
 ### Manual Build + Service Install
-
+Install the kutta binary as a service.
 ```bash
 git clone https://github.com/breachsimrange/kutta.git
 cd kutta
@@ -42,15 +53,22 @@ This will:
 
 ## Usage
 
-### Start Globally (default port `13377`)
-* Use this only if the service is not running
-
-```bash
-kutta
-```
+### Starts Globally (default port `13377`)
 
 * Runs on `http://localhost:13377`
-* **No files visible** initially, only uploaded files will be visible.
+* Make sure `kutta.service` is up and running.
+* No files visible initially, only uploaded files will be visible.
+
+#### Start Service, if the service is down
+
+```bash
+sudo systemctl start kutta
+```
+#### Stop Kutta Service
+
+```bash
+sudo systemctl stop kutta
+```
 
 ---
 
