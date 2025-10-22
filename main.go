@@ -22,6 +22,7 @@ var (
 	logFilePath = flag.String("log", "", "Path to log file")
 )
 
+//go:embed templates/* static/*
 var embeddedFiles embed.FS
 
 func main() {
