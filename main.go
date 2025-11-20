@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"strconv"
 	"path/filepath"
 )
 
@@ -37,6 +38,30 @@ func main() {
 	}
 
 
+	chosenDir := filepath.Clean(*dir)
+	if *port == 13377 {
+		chosenDir = "."
+	}
+
+	uploadDir := filepath.Join(chosenDir, "uploads")
+	if err := os.MkdirAll(uploadDir, 0750); err != nil {
+		log.Fatalf("Failed to create upload dir %s: %v", uploadDir, err)
+	}
+
+	if *runAsUser != "" && os.Geteuid() == 0 {
+		u, err := user.Lookup(*runAsUser)
+		if err != nil {
+			log.Fatalf("Failed to find user %s: %v", *runAsUser, err)
+		}
+
+		uid, _ := strconv.Atoi(u.Uid)
+		gid, _ := strconv.Atoi(u.Gid)
+
+		if err := os.Chown(uploadDir, uid, gid); err != nil {
+			log.Fatalf("Failed to chown upload dir %s to %s: %v", uploadDir, *runAsUser, err)
+		}
+	}
+
 	if *runAsUser != "" {
 		u, err := user.Lookup(*runAsUser)
 		if err != nil {
@@ -48,17 +73,13 @@ func main() {
 	}
 
 	h := &kuttaHandler{
-		Dir:          filepath.Clean(*dir),
+		Dir:          chosenDir,
 		ReadOnly:     *readOnly,
 		UploadOnly:   *uploadOnly,
 		AuthEnabled:  *authCreds != "",
 		AuthCreds:    *authCreds,
 		FS:           embeddedFiles,
-		UploadedOnly: *port == 13377, 
-	}
-
-	if *port == 13377 {
-		h.Dir = "."
+		UploadedOnly: *port == 13377,
 	}
 
 	h.RegisterRoutes()
@@ -70,7 +91,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	addr := fmt.Sprintf(":%d", *port)
-	log.Printf("Kuttañ serving payloads on http://localhost%s (dir: %s)", addr, *dir)
+	log.Printf("Kuttañ serving payloads on http://localhost%s (dir: %s)", addr, chosenDir)
 
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("Server error: %v", err)
