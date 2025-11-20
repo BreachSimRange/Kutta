@@ -95,7 +95,7 @@ kutta -p 8980
 
 ---
 
-## Developers, come here, thsi is crappy, we need help!
+## Developers, come here, this is crappy, we need help!
 
 * We know this is a crappy program, we need your contributions to make it better.
 
