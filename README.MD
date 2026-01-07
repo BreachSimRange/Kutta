@@ -2,7 +2,7 @@
 ![Kutta Logo](images/kutta-logo.jpg)
 
 **Kutta** is a lightweight, responsive web-based file sharing server written in **Go**.
-It was created to use during our trainings to move, payloads and code snippets across machines in the lab environment.
+It was created to use during our trainings to move payloads and code snippets across machines in the lab environment.
 It is an alternative tool for python http.server, motivated from tools like `goshs` and `updog`, with extra features.
 I had a loyal indie dog named 'Kuttan' when I was a kid. Meaning in Malayalam language would be 'Boy'\'Good boy'. 'Kutta' in Hindi language would mean, 'Dog".
 
@@ -18,7 +18,7 @@ I had a loyal indie dog named 'Kuttan' when I was a kid. Meaning in Malayalam la
 * **Service Ready** - Install as a `systemd` service
 
 ## Screenshots
-![Screenshot](images/web-ui.jpg)
+![Screenshot](images/web-ui.png)
 ---
 
 
@@ -30,7 +30,7 @@ I had a loyal indie dog named 'Kuttan' when I was a kid. Meaning in Malayalam la
 go install github.com/breachsimrange/kutta@latest
 ```
 
-This will put the `kutta` binary in `~/go/bin/`. You will be able to use `kutta` command from anythere.
+This will put the `kutta` binary in `~/go/bin/`. You will be able to use `kutta` command from anywhere.
 Make sure `~/go/bin` is in your `$PATH`. Note, this will not start a service.
 
 ---
@@ -80,7 +80,44 @@ kutta -p 8980
 
 * Runs on `http://localhost:8980`
 * Full directory browsing and downloads
-* Similar to python Simple HTTP Servr
+* Similar to python Simple HTTP Server
+
+---
+
+## Installation - Windows Systems
+
+### Installation
+Download or clone the repository.
+```bash
+git clone https://github.com/breachsimrange/kutta.git
+cd kutta
+```
+
+---
+
+### Build the binary
+
+For 64-bit:
+```powershell
+$env:GOOS="windows"; $env:GOARCH="amd64"; go build -o kutta.exe
+```
+
+For 32-bit:
+```powershell
+$env:GOOS="windows"; $env:GOARCH="386"; go build -o kutta.exe
+```
+
+This will generate `kutta.exe` in the project folder.
+
+---
+
+## Usage
+
+Start the server:
+```bash
+.\kutta.exe
+```
+By default, Kutta will listen on `http://localhost:13377`
 
 ---
 
