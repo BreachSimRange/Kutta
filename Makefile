@@ -9,7 +9,7 @@ install:
 	sudo mv $(BIN_NAME) $(INSTALL_DIR)/
 
 service:
-    sudo mkdir /var/kutta
+	sudo mkdir /var/kutta
 	sudo cp packaging/$(BIN_NAME).service $(SERVICE_FILE)
 	sudo systemctl daemon-reload
 	sudo systemctl enable $(BIN_NAME)
