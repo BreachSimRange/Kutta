@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -33,14 +34,46 @@ type ClipboardEntry struct {
 var clipboard []ClipboardEntry
 
 type kuttaHandler struct {
-	Dir          string
-	ReadOnly     bool
-	UploadOnly   bool
-	AuthEnabled  bool
-	AuthCreds    string
-	FS           embed.FS
-	UploadedOnly bool 
+    Dir          string
+    ReadOnly     bool
+    UploadOnly   bool
+    AuthEnabled  bool
+    AuthCreds    string
+    FS           embed.FS
+    UploadedOnly bool
+    Port         int
 }
+
+func firstNonLoopbackIPv4() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	
+	for _, a := range addrs {
+		ipnet, ok := a.(*net.IPNet)
+		if !ok || ipnet.IP == nil {
+			continue
+		}
+
+		ip := ipnet.IP.To4()
+		if ip == nil {
+			continue
+		}
+
+		if ip.IsLoopback() {
+			continue
+		}
+
+		if ip[0] == 169 && ip[1] == 254 {
+			continue
+		}
+
+		return ip.String()
+	}
+	return ""
+}
+
 
 func (h *kuttaHandler) RegisterRoutes() {
 	http.HandleFunc("/", h.indexHandler)
@@ -112,6 +145,19 @@ func (h *kuttaHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	serverIP := firstNonLoopbackIPv4()
+if serverIP == "" {
+    host := r.Host
+    if strings.Contains(host, ":") {
+        host = strings.Split(host, ":")[0]
+    }
+    serverIP = host
+}
+serverAddr := serverIP
+if h.Port != 80 && h.Port != 0 {
+    serverAddr = fmt.Sprintf("%s:%d", serverIP, h.Port)
+}
+
 	tmpl.Execute(w, map[string]interface{}{
 		"Files":      files,
 		"ReadOnly":   h.ReadOnly,
@@ -119,6 +165,7 @@ func (h *kuttaHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 		"Dir":        curDir,
 		"RelPath":    relPath,
 		"ParentPath": parentPath,
+		"ServerAddr": serverAddr,
 	})
 }
 
