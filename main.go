@@ -73,15 +73,15 @@ func main() {
 	}
 
 	h := &kuttaHandler{
-		Dir:          chosenDir,
-		ReadOnly:     *readOnly,
-		UploadOnly:   *uploadOnly,
-		AuthEnabled:  *authCreds != "",
-		AuthCreds:    *authCreds,
-		FS:           embeddedFiles,
-		UploadedOnly: *port == 13377,
+    	Dir:          chosenDir,
+    	ReadOnly:     *readOnly,
+    	UploadOnly:   *uploadOnly,
+    	AuthEnabled:  *authCreds != "",
+    	AuthCreds:    *authCreds,
+    	FS:           embeddedFiles,
+    	UploadedOnly: *port == 13377,
+    	Port:         *port,
 	}
-
 	h.RegisterRoutes()
 
 	staticFS, err := fs.Sub(embeddedFiles, "static")
