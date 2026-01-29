@@ -140,5 +140,9 @@ By default, Kutta will listen on `http://localhost:13377`
 
 ## License
 
+<<<<<<< HEAD
 ReleasedReleasedd under the [GNU General Public License v3 (GPL-3.0)](./LICENSE).
+=======
+Released under the [GNU General Public License v3 (GPL-3.0)](./LICENSE)...
+>>>>>>> e948aaf64bf81249dbf6147526608ea5787d4f74
 
