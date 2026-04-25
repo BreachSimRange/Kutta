@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"os"
 	"os/user"
-	"strconv"
 	"path/filepath"
+	"strconv"
 )
 
 var (
@@ -22,6 +22,11 @@ var (
 	runAsUser   = flag.String("user", "", "Drop privileges to this UNIX user")
 	logFilePath = flag.String("log", "", "Path to log file")
 )
+
+// defaultPort is the "quick share" port. When the server is launched on this
+// port we enable UploadedOnly mode, which scopes browsing/serving/deleting
+// to the uploads directory only.
+const defaultPort = 13377
 
 //go:embed templates/* static/*
 var embeddedFiles embed.FS
@@ -37,10 +42,9 @@ func main() {
 		log.SetOutput(f)
 	}
 
-
-	chosenDir := filepath.Clean(*dir)
-	if *port == 13377 {
-		chosenDir = "."
+	chosenDir, err := filepath.Abs(filepath.Clean(*dir))
+	if err != nil {
+		log.Fatalf("Failed to resolve dir %s: %v", *dir, err)
 	}
 
 	uploadDir := filepath.Join(chosenDir, "uploads")
@@ -48,15 +52,29 @@ func main() {
 		log.Fatalf("Failed to create upload dir %s: %v", uploadDir, err)
 	}
 
+	// If we're going to drop privileges, make sure the target user actually
+	// owns both the chosen dir and the uploads dir, otherwise the post-drop
+	// process won't be able to write into them. This was the bug behind
+	// "uploads silently fail on first install" — /var/kutta was created
+	// as root by the Makefile and the service user couldn't write to it.
 	if *runAsUser != "" && os.Geteuid() == 0 {
 		u, err := user.Lookup(*runAsUser)
 		if err != nil {
 			log.Fatalf("Failed to find user %s: %v", *runAsUser, err)
 		}
 
-		uid, _ := strconv.Atoi(u.Uid)
-		gid, _ := strconv.Atoi(u.Gid)
+		uid, err := strconv.Atoi(u.Uid)
+		if err != nil {
+			log.Fatalf("Invalid uid for %s: %v", *runAsUser, err)
+		}
+		gid, err := strconv.Atoi(u.Gid)
+		if err != nil {
+			log.Fatalf("Invalid gid for %s: %v", *runAsUser, err)
+		}
 
+		if err := os.Chown(chosenDir, uid, gid); err != nil {
+			log.Printf("Warning: failed to chown %s to %s: %v", chosenDir, *runAsUser, err)
+		}
 		if err := os.Chown(uploadDir, uid, gid); err != nil {
 			log.Fatalf("Failed to chown upload dir %s to %s: %v", uploadDir, *runAsUser, err)
 		}
@@ -73,14 +91,15 @@ func main() {
 	}
 
 	h := &kuttaHandler{
-    	Dir:          chosenDir,
-    	ReadOnly:     *readOnly,
-    	UploadOnly:   *uploadOnly,
-    	AuthEnabled:  *authCreds != "",
-    	AuthCreds:    *authCreds,
-    	FS:           embeddedFiles,
-    	UploadedOnly: *port == 13377,
-    	Port:         *port,
+		Dir:          chosenDir,
+		UploadDir:    uploadDir,
+		ReadOnly:     *readOnly,
+		UploadOnly:   *uploadOnly,
+		AuthEnabled:  *authCreds != "",
+		AuthCreds:    *authCreds,
+		FS:           embeddedFiles,
+		UploadedOnly: *port == defaultPort,
+		Port:         *port,
 	}
 	h.RegisterRoutes()
 
@@ -91,7 +110,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	addr := fmt.Sprintf(":%d", *port)
-	log.Printf("Kuttañ serving payloads on http://localhost%s (dir: %s)", addr, chosenDir)
+	log.Printf("Kuttañ serving payloads on http://localhost%s (dir: %s, uploads: %s)", addr, chosenDir, uploadDir)
 
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("Server error: %v", err)

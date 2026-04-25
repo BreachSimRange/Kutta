@@ -34,14 +34,26 @@ type ClipboardEntry struct {
 var clipboard []ClipboardEntry
 
 type kuttaHandler struct {
-    Dir          string
-    ReadOnly     bool
-    UploadOnly   bool
-    AuthEnabled  bool
-    AuthCreds    string
-    FS           embed.FS
-    UploadedOnly bool
-    Port         int
+	Dir          string
+	UploadDir    string
+	ReadOnly     bool
+	UploadOnly   bool
+	AuthEnabled  bool
+	AuthCreds    string
+	FS           embed.FS
+	UploadedOnly bool
+	Port         int
+}
+
+// effectiveRoot returns the directory the handler should treat as the
+// browsable / serveable root. In UploadedOnly mode (the default port-13377
+// "quick share" experience) we restrict everything to UploadDir so the
+// listing, downloads and deletes line up with where uploads actually land.
+func (h *kuttaHandler) effectiveRoot() string {
+	if h.UploadedOnly && h.UploadDir != "" {
+		return h.UploadDir
+	}
+	return h.Dir
 }
 
 func firstNonLoopbackIPv4() string {
@@ -49,7 +61,7 @@ func firstNonLoopbackIPv4() string {
 	if err != nil {
 		return ""
 	}
-	
+
 	for _, a := range addrs {
 		ipnet, ok := a.(*net.IPNet)
 		if !ok || ipnet.IP == nil {
@@ -73,7 +85,6 @@ func firstNonLoopbackIPv4() string {
 	}
 	return ""
 }
-
 
 func (h *kuttaHandler) RegisterRoutes() {
 	http.HandleFunc("/", h.indexHandler)
@@ -102,7 +113,7 @@ func (h *kuttaHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 	if relPath == "" {
 		relPath = "."
 	}
-	curDir := filepath.Join(h.Dir, relPath)
+	curDir := filepath.Join(h.effectiveRoot(), relPath)
 
 	entries, err := os.ReadDir(curDir)
 	if err != nil {
@@ -146,17 +157,17 @@ func (h *kuttaHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serverIP := firstNonLoopbackIPv4()
-if serverIP == "" {
-    host := r.Host
-    if strings.Contains(host, ":") {
-        host = strings.Split(host, ":")[0]
-    }
-    serverIP = host
-}
-serverAddr := serverIP
-if h.Port != 80 && h.Port != 0 {
-    serverAddr = fmt.Sprintf("%s:%d", serverIP, h.Port)
-}
+	if serverIP == "" {
+		host := r.Host
+		if strings.Contains(host, ":") {
+			host = strings.Split(host, ":")[0]
+		}
+		serverIP = host
+	}
+	serverAddr := serverIP
+	if h.Port != 80 && h.Port != 0 {
+		serverAddr = fmt.Sprintf("%s:%d", serverIP, h.Port)
+	}
 
 	tmpl.Execute(w, map[string]interface{}{
 		"Files":      files,
@@ -179,77 +190,105 @@ func (h *kuttaHandler) uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDir := h.Dir
+	// Always write into UploadDir if it has been configured. This is the
+	// directory main.go created (and chowned, if running with -user), so
+	// it is guaranteed to be writable by the running process.
+	curDir := h.UploadDir
+	if curDir == "" {
+		curDir = h.Dir
+	}
 	if curDir == "" {
 		curDir = "."
 	}
 
+	// Defence in depth: make sure the directory exists at request time too,
+	// in case it was removed after startup.
+	if err := os.MkdirAll(curDir, 0750); err != nil {
+		log.Printf("Upload failed: cannot create %s: %v", curDir, err)
+		http.Error(w, "Upload directory unavailable", http.StatusInternalServerError)
+		return
+	}
+
 	if r.Method == http.MethodPost {
-		r.ParseMultipartForm(50 << 20)
+		if err := r.ParseMultipartForm(50 << 20); err != nil {
+			log.Printf("Upload failed: ParseMultipartForm: %v", err)
+			http.Error(w, "Failed to parse upload", http.StatusBadRequest)
+			return
+		}
 		file, header, err := r.FormFile("file")
 		if err != nil {
+			log.Printf("Upload failed: FormFile: %v", err)
 			http.Error(w, "Failed to read file", http.StatusBadRequest)
 			return
 		}
 		defer file.Close()
 
-		outPath := filepath.Join(curDir, header.Filename)
+		safeName := filepath.Base(header.Filename)
+		outPath := filepath.Join(curDir, safeName)
 
 		if _, err := os.Stat(outPath); err == nil {
-			ext := filepath.Ext(header.Filename)
-			name := strings.TrimSuffix(header.Filename, ext)
+			ext := filepath.Ext(safeName)
+			name := strings.TrimSuffix(safeName, ext)
 			outPath = filepath.Join(curDir, fmt.Sprintf("%s_%d%s", name, time.Now().UnixNano(), ext))
 		}
 
 		outFile, err := os.Create(outPath)
 		if err != nil {
+			log.Printf("Upload failed: cannot create %s: %v", outPath, err)
 			http.Error(w, "Failed to save file", 500)
 			return
 		}
 		defer outFile.Close()
-		io.Copy(outFile, file)
-
-		uploadedFiles[outPath] = true
-
-		log.Printf("Uploaded via POST: %s", outPath)
-		http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-
-	} else if r.Method == http.MethodPut {
-		filename := filepath.Base(r.URL.Path)
-		if filename == "" {
-			http.Error(w, "Missing filename in URL", http.StatusBadRequest)
-			return
-		}
-
-		outPath := filepath.Join(curDir, filename)
-		if _, err := os.Stat(outPath); err == nil {
-			ext := filepath.Ext(filename)
-			name := strings.TrimSuffix(filename, ext)
-			outPath = filepath.Join(curDir, fmt.Sprintf("%s_%d%s", name, time.Now().UnixNano(), ext))
-		}
-
-		outFile, err := os.Create(outPath)
-		if err != nil {
-			http.Error(w, "Failed to save file", 500)
-			return
-		}
-		defer outFile.Close()
-
-		if _, err := io.Copy(outFile, r.Body); err != nil {
+		if _, err := io.Copy(outFile, file); err != nil {
+			log.Printf("Upload failed: copy: %v", err)
 			http.Error(w, "Failed to write file", 500)
 			return
 		}
 
 		uploadedFiles[outPath] = true
 
-		log.Printf("Uploaded via PUT: %s", outPath)
-		w.WriteHeader(http.StatusCreated)
+		log.Printf("Uploaded via POST: %s", outPath)
+		http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+		return
 	}
+
+	// PUT
+	filename := filepath.Base(r.URL.Path)
+	if filename == "" || filename == "." || filename == "/" {
+		http.Error(w, "Missing filename in URL", http.StatusBadRequest)
+		return
+	}
+
+	outPath := filepath.Join(curDir, filename)
+	if _, err := os.Stat(outPath); err == nil {
+		ext := filepath.Ext(filename)
+		name := strings.TrimSuffix(filename, ext)
+		outPath = filepath.Join(curDir, fmt.Sprintf("%s_%d%s", name, time.Now().UnixNano(), ext))
+	}
+
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		log.Printf("Upload failed: cannot create %s: %v", outPath, err)
+		http.Error(w, "Failed to save file", 500)
+		return
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, r.Body); err != nil {
+		log.Printf("Upload failed: copy: %v", err)
+		http.Error(w, "Failed to write file", 500)
+		return
+	}
+
+	uploadedFiles[outPath] = true
+
+	log.Printf("Uploaded via PUT: %s", outPath)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *kuttaHandler) fileServeHandler(w http.ResponseWriter, r *http.Request) {
 	relPath := strings.TrimPrefix(r.URL.Path, "/files/")
-	file := filepath.Join(h.Dir, relPath)
+	file := filepath.Join(h.effectiveRoot(), relPath)
 	http.ServeFile(w, r, file)
 }
 
@@ -259,7 +298,7 @@ func (h *kuttaHandler) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	file := r.URL.Query().Get("file")
-	path := filepath.Join(h.Dir, file)
+	path := filepath.Join(h.effectiveRoot(), file)
 
 	if !uploadedFiles[path] {
 		http.Error(w, "Cannot delete existing file", http.StatusForbidden)
@@ -270,7 +309,7 @@ func (h *kuttaHandler) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to delete file", 500)
 		return
 	}
-	delete(uploadedFiles, path) 
+	delete(uploadedFiles, path)
 	log.Printf("Deleted: %s", file)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -281,8 +320,9 @@ func (h *kuttaHandler) bulkDeleteHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	r.ParseForm()
+	root := h.effectiveRoot()
 	for _, file := range r.Form["files"] {
-		path := filepath.Join(h.Dir, file)
+		path := filepath.Join(root, file)
 		if uploadedFiles[path] {
 			os.Remove(path)
 			delete(uploadedFiles, path)
